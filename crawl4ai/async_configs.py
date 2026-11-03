@@ -1274,7 +1274,14 @@ class BrowserConfig:
     # Create a funciton returns dict of the object
     def dump(self) -> dict:
         # Serialize the object to a dictionary
-        return to_serializable_dict(self)
+        data = to_serializable_dict(self)
+        # __init__ re-adds the auto sec-ch-ua on load; drop it, the server rejects `headers`.
+        headers = data["params"].get("headers") if data else None
+        if isinstance(headers, dict) and headers["value"].get("sec-ch-ua") == self.browser_hint:
+            del headers["value"]["sec-ch-ua"]
+            if not headers["value"]:
+                del data["params"]["headers"]
+        return data
 
     @staticmethod
     def load(data: dict, provenance: "Provenance" = None) -> "BrowserConfig":
@@ -2398,6 +2405,8 @@ class CrawlerRunConfig():
             "disable_cache": self.disable_cache,
             "no_cache_read": self.no_cache_read,
             "no_cache_write": self.no_cache_write,
+            "check_cache_freshness": self.check_cache_freshness,
+            "cache_validation_timeout": self.cache_validation_timeout,
             "shared_data": self.shared_data,
             "wait_until": self.wait_until,
             "page_timeout": self.page_timeout,
@@ -2424,9 +2433,11 @@ class CrawlerRunConfig():
             "override_navigator": self.override_navigator,
             "magic": self.magic,
             "adjust_viewport_to_content": self.adjust_viewport_to_content,
+            "virtual_scroll_config": self.virtual_scroll_config,
             "screenshot": self.screenshot,
             "screenshot_wait_for": self.screenshot_wait_for,
             "screenshot_height_threshold": self.screenshot_height_threshold,
+            "force_viewport_screenshot": self.force_viewport_screenshot,
             "pdf": self.pdf,
             "capture_mhtml": self.capture_mhtml,
             "image_description_min_word_threshold": self.image_description_min_word_threshold,
@@ -2461,6 +2472,8 @@ class CrawlerRunConfig():
             "match_mode": self.match_mode,
             "experimental": self.experimental,
             "max_retries": self.max_retries,
+            "fallback_fetch_function": self.fallback_fetch_function,
+            "base_url": self.base_url,
         }
 
     def clone(self, **kwargs):
